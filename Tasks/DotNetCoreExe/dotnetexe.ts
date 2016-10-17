@@ -62,7 +62,15 @@ export class dotNetExe {
                 outputSource = path.join(this.outputArgument, path.basename(path.dirname(projectFile)));
             }
             else {
-                //TODO:: Fix this.
+                var pattern = path.dirname(projectFile) + "/**/publish";
+                var files = ffl.findFiles(pattern, true);
+                for (var fileIndex in files) {
+                    var file = files[fileIndex];
+                    if (fs.lstatSync(file).isDirectory) {
+                        outputSource = file;
+                        break;
+                    }
+                }
             }
 
             var outputTarget = outputSource + ".zip";
