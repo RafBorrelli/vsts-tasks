@@ -1,6 +1,9 @@
 import tl = require("vsts-task-lib/task");
 import path = require("path");
 import fs = require("fs");
+import ffl = require('find-files-legacy/findfiles.legacy');
+var gulp = require('gulp');
+var zip = require('gulp-zip');
 var minimist = require('minimist');
 
 export class dotNetExe {
@@ -20,16 +23,17 @@ export class dotNetExe {
         this.zipAfterPublish = tl.getBoolInput("zipAfterPublish", false);
     }
 
-    public execute() {
+    public async execute() {
         var dotnetPath = tl.which("dotnet", true);
 
         this.updateOutputArgument();
 
         var projectFiles: string[] = (this.command === "publish" && this.publishWebProjects)
-            ? filePathHelper.getWebProjects("projects")
-            : filePathHelper.getFilesWithMatchingPattern(this.projects, "projects");
+            ? this.getWebProjects()
+            : ffl.findFiles(this.projects, false);
 
-        projectFiles.forEach((projectFile) => {
+        for (var fileIndex in projectFiles) {
+            var projectFile = projectFiles[fileIndex];
             try {
                 var dotnet = tl.tool(dotnetPath);
                 dotnet.arg(this.command);
@@ -41,20 +45,21 @@ export class dotNetExe {
                     tl.setResult(result.code, "Command failed with non-zero exit code.");
                 }
 
-                this.zipAfterPublishIfRequired(projectFile);
+                await this.zipAfterPublishIfRequired(projectFile);
+
             }
             catch (err)
             {
                 tl.setResult(1, err.message);
             }
-        });
+        }
     }
 
-    private zipAfterPublishIfRequired(projectFile: string): void {
+    private async zipAfterPublishIfRequired(projectFile: string) {
         if (this.command === "publish" && this.zipAfterPublish) {
             var outputSource: string = "";
             if (this.outputArgument) {
-                outputSource = path.join(this.outputArgument, path.dirname(projectFile));
+                outputSource = path.join(this.outputArgument, path.basename(path.dirname(projectFile)));
             }
             else {
                 //TODO:: Fix this.
@@ -62,25 +67,24 @@ export class dotNetExe {
 
             var outputTarget = outputSource + ".zip";
             if (tl.exist(outputSource)) {
-                this.zip(outputSource, outputTarget);
+                await this.zip(outputSource, outputTarget);
+                tl.rmRF(outputSource, true);
             }
         }
     }
 
     private zip (source: string, target: string) {
-        var win = tl.osType().match(/^Win/);
-        // TODO:: Complete this.
-        if (win) {
-            var tool = tl.tool(tl.which("cscript.exe", true));
-            tool.arg(source);
-            tool.arg(target);
-            tl.rmRF(source);
-        }
+        return new Promise((resolve, reject) => {
+            gulp.src(path.join(source, '**', '*'))
+            .pipe(zip(path.basename(target)))
+            .pipe(gulp.dest(path.dirname(target))).on('end', function(error){
+                resolve("");
+                })});
     }
 
     private getCommandArguments(projectFile: string): string {
         if (this.command === "publish" && this.outputArgument) {
-            var output = path.join(this.outputArgument, path.dirname(projectFile));
+            var output = path.join(this.outputArgument, path.basename(path.dirname(projectFile)));
             return this.remainingArgument + ' --output ' + output;
         }
 
@@ -102,13 +106,10 @@ export class dotNetExe {
                 }
             }
         }
-
     }
-}
 
-class filePathHelper {
-    public static getWebProjects(argName: string): string [] {
-        var allFiles = filePathHelper.getFilesWithMatchingPattern("**/project.json", argName);
+     private getWebProjects(): string [] {
+        var allFiles = ffl.findFiles("**/project.json", false);
         var webProjects = allFiles.filter(function(file, index, files): boolean {
             var directory = path.dirname(file);
             return fs.existsSync(path.join(directory, "web.config")) 
@@ -116,47 +117,11 @@ class filePathHelper {
         });
 
         if (!webProjects.length) {
-            tl.setResult(1, "No matching files were found for argument: " + argName);
+            tl.setResult(1, "No matching files were found for projects");
         }
 
         return webProjects;
     }
-
-    public static getFilesWithMatchingPattern(filePattern: string, argName: string): string[] {
-        var filesList = [];
-        if (filePattern.indexOf('*') == -1 && filePattern.indexOf('?') == -1) {
-            tl.checkPath(filePattern, argName);
-            filesList = [filePattern];
-        }
-        else {
-            // Find app files matching the specified pattern
-            tl.debug('Matching glob pattern: ' + filePattern);
-            // First find the most complete path without any matching patterns
-            var idx = filePathHelper.firstWildcardIndex(filePattern);
-            tl.debug('Index of first wildcard: ' + idx);
-            var findPathRoot = path.dirname(filePattern.slice(0, idx));
-            tl.debug('find root dir: ' + findPathRoot);
-            // Now we get a list of all files under this root
-            var allFiles = tl.find(findPathRoot);
-            // Now matching the pattern against all files
-            filesList = tl.match(allFiles, filePattern, { matchBase: true });
-            // Fail if no matching .csproj files were found
-            if (!filesList || filesList.length == 0) {
-                tl.setResult(1, 'No matching files were found with search pattern: ' + argName);
-            }
-        }
-
-        return filesList;
-    }
-
-    private static firstWildcardIndex(str: string): number {
-        var idx = str.indexOf('*');
-        var idxOfWildcard = str.indexOf('?');
-        if (idxOfWildcard > -1) {
-            return (idx > -1) ? Math.min(idx, idxOfWildcard) : idxOfWildcard;
-        }
-        return idx;
-    };
 }
 
 var exe = new dotNetExe();
