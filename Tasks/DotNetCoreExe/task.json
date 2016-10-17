@@ -1,0 +1,89 @@
+{
+    "id": "5541a522-603c-47ad-91fc-a4b1d163081b",
+    "name": "DotNetCoreExe",
+    "friendlyName": "DotNet Core Exe",
+    "description": "Runs the specified dotnet command",
+    "author": "Microsoft Corporation",
+    "helpMarkDown": "Runs the specified dotnet command",
+    "category": "Build",
+    "visibility": [
+        "Build",
+        "Release"
+    ],
+    "runsOn": [
+        "Agent"
+    ],
+    "demands": [],
+    "version": {
+        "Major": 0,
+        "Minor": 0,
+        "Patch": 12
+    },
+    "minimumAgentVersion": "1.95.0",
+    "instanceNameFormat": "dotnet $(command)",
+    "groups": [
+    ],
+    "inputs": [
+        {
+            "name": "command",
+            "type": "pickList",
+            "label": "Command Name",
+            "defaultValue": "build",
+            "required": true,
+            "helpMarkDown": "DotNet command to execute",
+            "options": {
+                "build": "build",
+                "publish": "publish",
+                "restore": "restore",
+                "test": "test",
+                "run": "run"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            }
+        },
+        {
+            "name": "publishWebProjects",
+            "type": "boolean",
+            "visibleRule": "command = publish",
+            "label": "Publish web projects",
+            "defaultValue": "true",
+            "required": true,
+            "helpMarkDown": "Web projects are identified by presence of either a web.config and wwwroot folder in the directory."
+        },
+        {
+            "name": "projects",
+            "type": "string",
+            "label": "Projects",
+            "defaultValue": "",
+            "visibleRule": "command != publish || publishWebProjects = false",
+            "required": true,
+            "helpMarkDown": "Project files on which the command should be exectued"
+        },
+        {
+            "name": "arguments",
+            "type": "string",
+            "label": "Arguments",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "Arguments to the command"
+        },
+        {
+            "name": "zipAfterPublish",
+            "type": "boolean",
+            "visibleRule": "command = publish",
+            "label": "Zip published projects",
+            "defaultValue": "true",
+            "required": false,
+            "helpMarkDown": "Published projects will also be zipped."
+        }
+    ],
+    "execution": {
+        "Node": {
+            "target": "dotnetexe.js",
+            "argumentFormat": ""
+        }
+    },
+    "messages": {
+    }
+}

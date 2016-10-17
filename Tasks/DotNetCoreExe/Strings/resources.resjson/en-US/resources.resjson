@@ -1,0 +1,16 @@
+{
+  "loc.friendlyName": "DotNet Core Exe",
+  "loc.helpMarkDown": "Runs the specified dotnet command",
+  "loc.description": "Runs the specified dotnet command",
+  "loc.instanceNameFormat": "dotnet $(command)",
+  "loc.input.label.command": "Command Name",
+  "loc.input.help.command": "DotNet command to execute",
+  "loc.input.label.publishWebProjects": "Publish web projects",
+  "loc.input.help.publishWebProjects": "Web projects are identified by presence of either a web.config and wwwroot folder in the directory.",
+  "loc.input.label.projects": "Projects",
+  "loc.input.help.projects": "Project files on which the command should be exectued",
+  "loc.input.label.arguments": "Arguments",
+  "loc.input.help.arguments": "Arguments to the command",
+  "loc.input.label.zipAfterPublish": "Zip published projects",
+  "loc.input.help.zipAfterPublish": "Published projects will also be zipped."
+}
